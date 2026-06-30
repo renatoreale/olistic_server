@@ -7,8 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ADMIN_EMAILS = ["regnew01@gmail.com", "maria732008@live.it", "realerenato@gmail.com"];
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -49,14 +47,22 @@ Deno.serve(async (req) => {
           global: { headers: { Authorization: `Bearer ${token}` } },
         });
 
-    if (!user.email || !ADMIN_EMAILS.includes(user.email)) {
+    // Legge il ruolo dal database (profiles.role)
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const userRole: string = profileRow?.role || "user";
+    console.log(`[admin] role=${userRole}`);
+
+    if (!["admin", "superadmin"].includes(userRole)) {
       return new Response(JSON.stringify({ error: "Accesso negato" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const userRole = user.email === "regnew01@gmail.com" ? "superadmin" : "viewer";
 
     // Determine action from query string or body
     const url = new URL(req.url);
