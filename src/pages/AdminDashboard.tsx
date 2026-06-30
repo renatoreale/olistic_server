@@ -7,6 +7,7 @@ import {
   Eye, Loader2, UserX, ShoppingBag, X, CalendarClock, Save,
   LogIn, KeyRound, Trash2, Gift, Plus, Power, ToggleLeft, ToggleRight, Heart,
   MessageSquare, Lightbulb, HelpCircle, CheckCircle, Clock, ChevronDown, ChevronUp,
+  Building2, Copy, Check, Globe, Palette, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,24 @@ interface FeatureScheduleItem {
   enabled: boolean;
 }
 
+const ALL_FEATURES = [
+  { key: "daily_analysis", label: "Analisi giornaliera" },
+  { key: "map", label: "Mappa numerologica" },
+  { key: "outfits", label: "Outfit del giorno" },
+  { key: "chat", label: "Chat AI" },
+  { key: "community", label: "Community" },
+  { key: "brand", label: "Brand" },
+  { key: "house", label: "Casa" },
+  { key: "compatibility", label: "Compatibilità" },
+  { key: "personal_year", label: "Anno personale" },
+  { key: "pillars", label: "Pilastri" },
+  { key: "dates", label: "Date importanti" },
+  { key: "advanced_report", label: "Report avanzato" },
+  { key: "dating", label: "Dating" },
+  { key: "dating_photos", label: "Foto dating" },
+  { key: "dating_report", label: "Report dating" },
+];
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -90,6 +109,21 @@ const AdminDashboard = () => {
   const [savingTicket, setSavingTicket] = useState<string | null>(null);
   const [ticketFilter, setTicketFilter] = useState<"all" | "open" | "read" | "resolved">("open");
 
+  // Tenant management state
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<any | null>(null);
+  const [showNewTenant, setShowNewTenant] = useState(false);
+  const [savingTenant, setSavingTenant] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [newTenant, setNewTenant] = useState({
+    name: "", slug: "", default_language: "it",
+    enabled_features: [
+      "daily_analysis", "map", "outfits", "chat", "community",
+      "brand", "house", "compatibility", "personal_year", "pillars", "dates",
+    ] as string[],
+  });
+
   // Dating config state
   const [datingFreePhotos, setDatingFreePhotos] = useState(1);
   const [savingDating, setSavingDating] = useState(false);
@@ -102,7 +136,63 @@ const AdminDashboard = () => {
     fetchPromotions();
     fetchDatingConfig();
     fetchTickets();
+    fetchTenants();
   }, []);
+
+  const fetchTenants = async () => {
+    setTenantsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("superadmin_get_tenants" as any);
+      if (!error && data) setTenants(data as any[]);
+    } catch (e) { console.error(e); }
+    setTenantsLoading(false);
+  };
+
+  const handleCreateTenant = async () => {
+    if (!newTenant.name || !newTenant.slug) return;
+    setSavingTenant(true);
+    try {
+      const { data, error } = await supabase.rpc("superadmin_create_tenant" as any, {
+        p_name: newTenant.name,
+        p_slug: newTenant.slug,
+        p_default_language: newTenant.default_language,
+        p_enabled_features: newTenant.enabled_features,
+      });
+      if (!error) {
+        setShowNewTenant(false);
+        setNewTenant({ name: "", slug: "", default_language: "it", enabled_features: ["daily_analysis","map","outfits","chat","community","brand","house","compatibility","personal_year","pillars","dates"] });
+        await fetchTenants();
+      }
+    } catch (e) { console.error(e); }
+    setSavingTenant(false);
+  };
+
+  const handleUpdateTenant = async () => {
+    if (!editingTenant) return;
+    setSavingTenant(true);
+    try {
+      await supabase.rpc("superadmin_update_tenant" as any, {
+        p_tenant_id: editingTenant.id,
+        p_name: editingTenant.name,
+        p_branding: editingTenant.branding,
+        p_stripe_secret_key: editingTenant.stripe_secret_key || null,
+        p_stripe_price_id_monthly: editingTenant.stripe_price_id_monthly || null,
+        p_stripe_price_id_yearly: editingTenant.stripe_price_id_yearly || null,
+        p_enabled_features: editingTenant.enabled_features,
+        p_default_language: editingTenant.default_language,
+        p_is_active: editingTenant.is_active,
+      });
+      setEditingTenant(null);
+      await fetchTenants();
+    } catch (e) { console.error(e); }
+    setSavingTenant(false);
+  };
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(id);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const fetchDatingConfig = async () => {
     const { data } = await supabase.from("app_settings" as any)
@@ -526,6 +616,290 @@ const AdminDashboard = () => {
                 {isFreeMode ? "Attiva Abbonamento" : "Attiva Gratuito"}
               </Button>
             </div>
+          </motion.div>
+        )}
+
+        {/* Tenant Management - superadmin only */}
+        {isSuperadmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-cosmic rounded-xl p-6 mb-8"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-primary" />
+                <h2 className="font-display text-lg font-semibold">Gestione Tenant</h2>
+              </div>
+              <Button variant="cosmic" size="sm" onClick={() => setShowNewTenant(!showNewTenant)}>
+                <Plus className="w-4 h-4 mr-1" />
+                Nuovo Tenant
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Ogni tenant è un'app indipendente (Android, iOS, Web) con il proprio branding, Stripe e feature abilitate.
+            </p>
+
+            {/* Form nuovo tenant */}
+            {showNewTenant && (
+              <div className="mb-6 p-4 rounded-lg border border-primary/20 bg-card/30 space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Nuovo Tenant</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Nome app</label>
+                    <Input placeholder="es. NuovaApp" value={newTenant.name} onChange={e => setNewTenant(p => ({ ...p, name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Slug (univoco, no spazi)</label>
+                    <Input placeholder="es. nuovaapp" value={newTenant.slug} onChange={e => setNewTenant(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Lingua default</label>
+                  <select
+                    className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                    value={newTenant.default_language}
+                    onChange={e => setNewTenant(p => ({ ...p, default_language: e.target.value }))}
+                  >
+                    {[["it","Italiano"],["en","English"],["es","Español"],["fr","Français"],["pt","Português"]].map(([v,l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-2 block">Feature abilitate</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {ALL_FEATURES.map(f => (
+                      <label key={f.key} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={newTenant.enabled_features.includes(f.key)}
+                          onCheckedChange={checked => setNewTenant(p => ({
+                            ...p,
+                            enabled_features: checked ? [...p.enabled_features, f.key] : p.enabled_features.filter(k => k !== f.key),
+                          }))}
+                        />
+                        <span className="text-xs text-foreground">{f.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="cosmic" size="sm" onClick={handleCreateTenant} disabled={savingTenant || !newTenant.name || !newTenant.slug}>
+                    {savingTenant ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
+                    Crea Tenant
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowNewTenant(false)}>Annulla</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista tenant */}
+            {tenantsLoading ? (
+              <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+            ) : (
+              <div className="space-y-4">
+                {tenants.map((t: any) => (
+                  <div key={t.id} className={`rounded-xl border p-4 ${t.is_active ? 'border-primary/20 bg-primary/5' : 'border-border/30 bg-muted/10 opacity-60'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground">{t.name}</span>
+                          <span className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-full">{t.slug}</span>
+                          {!t.is_active && <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">Disattivo</span>}
+                          {t.has_stripe && <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1"><CreditCard className="w-3 h-3" />Stripe</span>}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-muted-foreground font-mono bg-muted/20 px-2 py-1 rounded truncate max-w-[200px]">{t.api_key}</span>
+                          <button
+                            onClick={() => copyToClipboard(t.api_key, t.id)}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            title="Copia API key"
+                          >
+                            {copiedKey === t.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                        <div className="flex gap-4 mt-1">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Users className="w-3 h-3" />{t.user_count} utenti</span>
+                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Globe className="w-3 h-3" />Creato {new Date(t.created_at).toLocaleDateString("it-IT")}</span>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setEditingTenant({ ...t, stripe_secret_key: "", stripe_price_id_monthly: "", stripe_price_id_yearly: "", branding: t.branding || {} })}>
+                        <Save className="w-3 h-3 mr-1" />
+                        Modifica
+                      </Button>
+                    </div>
+
+                    {/* Form modifica tenant */}
+                    {editingTenant?.id === t.id && (
+                      <div className="mt-4 pt-4 border-t border-border/30 space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Nome app</label>
+                            <Input value={editingTenant.name} onChange={e => setEditingTenant((p: any) => ({ ...p, name: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Lingua default</label>
+                            <select
+                              className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                              value={editingTenant.default_language}
+                              onChange={e => setEditingTenant((p: any) => ({ ...p, default_language: e.target.value }))}
+                            >
+                              {[["it","Italiano"],["en","English"],["es","Español"],["fr","Français"],["pt","Português"]].map(([v,l]) => (
+                                <option key={v} value={v}>{l}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Branding */}
+                        <div className="p-3 rounded-lg border border-border/30 bg-card/20 space-y-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Palette className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-foreground">Branding</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Nome app (titolo pagina)</label>
+                              <Input
+                                placeholder="es. Numflame"
+                                value={editingTenant.branding?.appName ?? ""}
+                                onChange={e => setEditingTenant((p: any) => ({ ...p, branding: { ...p.branding, appName: e.target.value } }))}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Tagline</label>
+                              <Input
+                                placeholder="es. Scopri il potere dei tuoi numeri"
+                                value={editingTenant.branding?.tagline ?? ""}
+                                onChange={e => setEditingTenant((p: any) => ({ ...p, branding: { ...p.branding, tagline: e.target.value } }))}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Colore primario (hex)</label>
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="#7c3aed"
+                                  value={editingTenant.branding?.primaryColor ?? ""}
+                                  onChange={e => setEditingTenant((p: any) => ({ ...p, branding: { ...p.branding, primaryColor: e.target.value } }))}
+                                />
+                                <input
+                                  type="color"
+                                  className="w-9 h-9 rounded-md border border-input cursor-pointer"
+                                  value={editingTenant.branding?.primaryColor ?? "#7c3aed"}
+                                  onChange={e => setEditingTenant((p: any) => ({ ...p, branding: { ...p.branding, primaryColor: e.target.value } }))}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Colore secondario (hex)</label>
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="#a78bfa"
+                                  value={editingTenant.branding?.secondaryColor ?? ""}
+                                  onChange={e => setEditingTenant((p: any) => ({ ...p, branding: { ...p.branding, secondaryColor: e.target.value } }))}
+                                />
+                                <input
+                                  type="color"
+                                  className="w-9 h-9 rounded-md border border-input cursor-pointer"
+                                  value={editingTenant.branding?.secondaryColor ?? "#a78bfa"}
+                                  onChange={e => setEditingTenant((p: any) => ({ ...p, branding: { ...p.branding, secondaryColor: e.target.value } }))}
+                                />
+                              </div>
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="text-xs text-muted-foreground mb-1 block">URL Logo (opzionale)</label>
+                              <Input
+                                placeholder="https://..."
+                                value={editingTenant.branding?.logoUrl ?? ""}
+                                onChange={e => setEditingTenant((p: any) => ({ ...p, branding: { ...p.branding, logoUrl: e.target.value || null } }))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Stripe */}
+                        <div className="p-3 rounded-lg border border-border/30 bg-card/20 space-y-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CreditCard className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-foreground">Stripe</span>
+                            <span className="text-xs text-muted-foreground">(lascia vuoto per non modificare)</span>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground mb-1 block">Stripe Secret Key</label>
+                            <Input
+                              type="password"
+                              placeholder="sk_live_..."
+                              value={editingTenant.stripe_secret_key ?? ""}
+                              onChange={e => setEditingTenant((p: any) => ({ ...p, stripe_secret_key: e.target.value }))}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Price ID Mensile</label>
+                              <Input
+                                placeholder="price_..."
+                                value={editingTenant.stripe_price_id_monthly ?? ""}
+                                onChange={e => setEditingTenant((p: any) => ({ ...p, stripe_price_id_monthly: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground mb-1 block">Price ID Annuale</label>
+                              <Input
+                                placeholder="price_..."
+                                value={editingTenant.stripe_price_id_yearly ?? ""}
+                                onChange={e => setEditingTenant((p: any) => ({ ...p, stripe_price_id_yearly: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Feature flags */}
+                        <div className="p-3 rounded-lg border border-border/30 bg-card/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Zap className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-foreground">Feature abilitate</span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {ALL_FEATURES.map(f => (
+                              <label key={f.key} className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                  checked={(editingTenant.enabled_features ?? []).includes(f.key)}
+                                  onCheckedChange={checked => setEditingTenant((p: any) => ({
+                                    ...p,
+                                    enabled_features: checked
+                                      ? [...(p.enabled_features ?? []), f.key]
+                                      : (p.enabled_features ?? []).filter((k: string) => k !== f.key),
+                                  }))}
+                                />
+                                <span className="text-xs text-foreground">{f.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Attivo/Disattivo */}
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-border/30 bg-card/20">
+                          <span className="text-sm font-medium text-foreground">Tenant attivo</span>
+                          <button onClick={() => setEditingTenant((p: any) => ({ ...p, is_active: !p.is_active }))}>
+                            {editingTenant.is_active
+                              ? <ToggleRight className="w-8 h-8 text-emerald-400" />
+                              : <ToggleLeft className="w-8 h-8 text-muted-foreground" />}
+                          </button>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <Button variant="cosmic" size="sm" onClick={handleUpdateTenant} disabled={savingTenant}>
+                            {savingTenant ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                            Salva modifiche
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setEditingTenant(null)}>Annulla</Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
 
