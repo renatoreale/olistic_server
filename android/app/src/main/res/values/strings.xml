@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Numflame</string>
+    <string name="title_activity_main">Numflame</string>
+    <string name="package_name">com.destinonumerologico.app</string>
+    <string name="custom_url_scheme">com.destinonumerologico.app</string>
+</resources>

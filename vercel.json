@@ -1,0 +1,15 @@
+{
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/check-incomplete-registrations",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/seed-daily-community",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}

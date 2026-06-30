@@ -1,0 +1,43 @@
+project_id = "viqnjvscvbohfbtcnjch"
+
+[functions.generate-outfits]
+verify_jwt = false
+
+[functions.check-incomplete-registrations]
+verify_jwt = false
+
+[functions.generate-advanced-report]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.check-subscription]
+verify_jwt = false
+
+[functions.customer-portal]
+verify_jwt = false
+
+[functions.admin-dashboard]
+verify_jwt = false
+
+[functions.seed-daily-community]
+verify_jwt = false
+
+[functions.chat-numerology]
+verify_jwt = false
+
+[functions.disable-account]
+verify_jwt = false
+
+[functions.meditation-music]
+verify_jwt = false
+
+[functions.meditation-tts]
+verify_jwt = false
+
+[functions.find-soulmates]
+verify_jwt = false
+
+[functions.dating-ai-chat]
+verify_jwt = false

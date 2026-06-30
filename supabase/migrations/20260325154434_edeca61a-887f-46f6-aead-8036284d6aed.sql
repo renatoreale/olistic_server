@@ -1,0 +1,1 @@
+-- pg_cron and pg_net extensions removed (not available on Free plan; cron jobs replaced by Vercel Cron)

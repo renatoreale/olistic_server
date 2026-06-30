@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#2d1155"/>
+      <stop offset="100%" stop-color="#0c0814"/>
+    </radialGradient>
+    <linearGradient id="heartFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9333ea"/>
+      <stop offset="45%" stop-color="#db2777"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+    <filter id="heartGlow" x="-45%" y="-45%" width="190%" height="190%">
+      <feGaussianBlur stdDeviation="16" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="ambientBlur" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="35"/>
+    </filter>
+    <filter id="starGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="url(#bg)"/>
+
+  <!-- Ambient heart glow -->
+  <ellipse cx="256" cy="255" rx="170" ry="140" fill="#9333ea" opacity="0.22" filter="url(#ambientBlur)"/>
+
+  <!-- Outer mystical dashed ring -->
+  <circle cx="256" cy="256" r="226" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-opacity="0.38" stroke-dasharray="6 9"/>
+  <!-- Inner ring -->
+  <circle cx="256" cy="256" r="178" fill="none" stroke="#f59e0b" stroke-width="0.8" stroke-opacity="0.22" stroke-dasharray="2 7"/>
+
+  <!-- Numbers 1-9 in a ring at r=155 from center (256,256) -->
+  <text x="256" y="108" text-anchor="middle" dominant-baseline="middle" fill="#fbbf24" font-size="23" font-family="Georgia, serif" font-weight="bold" opacity="0.75">1</text>
+  <text x="356" y="144" text-anchor="middle" dominant-baseline="middle" fill="#c084fc" font-size="21" font-family="Georgia, serif" font-weight="bold" opacity="0.68">2</text>
+  <text x="409" y="236" text-anchor="middle" dominant-baseline="middle" fill="#fbbf24" font-size="21" font-family="Georgia, serif" font-weight="bold" opacity="0.68">3</text>
+  <text x="390" y="340" text-anchor="middle" dominant-baseline="middle" fill="#c084fc" font-size="21" font-family="Georgia, serif" font-weight="bold" opacity="0.68">4</text>
+  <text x="309" y="402" text-anchor="middle" dominant-baseline="middle" fill="#fbbf24" font-size="21" font-family="Georgia, serif" font-weight="bold" opacity="0.68">5</text>
+  <text x="203" y="402" text-anchor="middle" dominant-baseline="middle" fill="#c084fc" font-size="21" font-family="Georgia, serif" font-weight="bold" opacity="0.68">6</text>
+  <text x="122" y="340" text-anchor="middle" dominant-baseline="middle" fill="#fbbf24" font-size="21" font-family="Georgia, serif" font-weight="bold" opacity="0.68">7</text>
+  <text x="103" y="236" text-anchor="middle" dominant-baseline="middle" fill="#c084fc" font-size="21" font-family="Georgia, serif" font-weight="bold" opacity="0.68">8</text>
+  <text x="156" y="144" text-anchor="middle" dominant-baseline="middle" fill="#fbbf24" font-size="21" font-family="Georgia, serif" font-weight="bold" opacity="0.68">9</text>
+
+  <!-- Heart ambient glow layer -->
+  <path d="M256,352 C200,316 134,270 134,208 C134,162 163,142 200,153 C226,161 249,186 256,202 C263,186 286,161 312,153 C349,142 378,162 378,208 C378,270 312,316 256,352 Z"
+        fill="#db2777" opacity="0.4" filter="url(#ambientBlur)"/>
+
+  <!-- Heart main shape -->
+  <path d="M256,352 C200,316 134,270 134,208 C134,162 163,142 200,153 C226,161 249,186 256,202 C263,186 286,161 312,153 C349,142 378,162 378,208 C378,270 312,316 256,352 Z"
+        fill="url(#heartFill)" filter="url(#heartGlow)"/>
+
+  <!-- Heart highlight shimmer -->
+  <ellipse cx="216" cy="192" rx="28" ry="18" fill="white" opacity="0.13" transform="rotate(-30 216 192)"/>
+
+  <!-- Sparkle stars -->
+  <g transform="translate(104,116)" filter="url(#starGlow)">
+    <line x1="0" y1="-10" x2="0" y2="10" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="-10" y1="0" x2="10" y2="0" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="-6" y1="-6" x2="6" y2="6" stroke="#fbbf24" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="6" y1="-6" x2="-6" y2="6" stroke="#fbbf24" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(402,104)" filter="url(#starGlow)">
+    <line x1="0" y1="-8" x2="0" y2="8" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="-8" y1="0" x2="8" y2="0" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(88,400)" filter="url(#starGlow)">
+    <line x1="0" y1="-7" x2="0" y2="7" stroke="#f9a8d4" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="-7" y1="0" x2="7" y2="0" stroke="#f9a8d4" stroke-width="1.8" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(420,412)" filter="url(#starGlow)">
+    <line x1="0" y1="-9" x2="0" y2="9" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-9" y1="0" x2="9" y2="0" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-5" y1="-5" x2="5" y2="5" stroke="#fbbf24" stroke-width="1" stroke-linecap="round"/>
+    <line x1="5" y1="-5" x2="-5" y2="5" stroke="#fbbf24" stroke-width="1" stroke-linecap="round"/>
+  </g>
+
+  <!-- Tiny star dots -->
+  <circle cx="176" cy="76"  r="2.2" fill="#fbbf24" opacity="0.8"/>
+  <circle cx="338" cy="70"  r="1.8" fill="#c084fc" opacity="0.75"/>
+  <circle cx="462" cy="298" r="1.8" fill="#fbbf24" opacity="0.65"/>
+  <circle cx="50"  cy="293" r="2"   fill="#c084fc" opacity="0.65"/>
+  <circle cx="460" cy="188" r="1.5" fill="#f9a8d4" opacity="0.7"/>
+  <circle cx="52"  cy="194" r="1.5" fill="#fbbf24" opacity="0.6"/>
+
+  <!-- Central light point -->
+  <circle cx="256" cy="252" r="7" fill="white" opacity="0.45" filter="url(#starGlow)"/>
+  <circle cx="256" cy="252" r="3" fill="white" opacity="0.95"/>
+</svg>

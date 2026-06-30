@@ -1,0 +1,48 @@
+# NumerologicalDestiny
+
+> Piattaforma italiana di numerologia pitagorica e dating numerologico. Compatibilità calcolata su 6 dimensioni dalla data di nascita.
+
+NumerologicalDestiny è una piattaforma web che applica i principi della Numerologia Pitagorica alla vita quotidiana e alle relazioni. Fondata da Renato R., studioso di numerologia, fisica quantistica e informatica.
+
+## Cosa offriamo
+
+- **Trova la tua Anima Gemella**: matching numerologico su 6 dimensioni (Destino, Anima, Personalità, Karma, Espressione, Anno Personale) calcolato sulla data di nascita. A differenza delle app di dating tradizionali, non usiamo algoritmi di swipe ma compatibilità reale.
+- **Mappa Numerologica personalizzata**: analisi completa di tutti i numeri che definiscono la tua personalità, calcolata sulla tua data di nascita e nome completo.
+- **Consulente AI di numerologia**: risposte personalizzate in tempo reale sui tuoi numeri.
+- **Outfit del giorno numerologico**: consigli sui colori e lo stile in base alla vibrazione del giorno.
+- **Date favorevoli**: i giorni migliori per decisioni importanti, incontri, progetti.
+- **Compatibilità**: analisi con partner, amici, colleghi, familiari.
+- **Anno Personale**: tema, opportunità e sfide del tuo anno secondo i cicli numerologici.
+- **Community**: migliaia di appassionati di numerologia.
+
+## Come funziona il matching Anime Gemelle
+
+1. L'utente crea la propria Mappa Numerologica (data di nascita obbligatoria).
+2. Il sistema calcola 6 numeri chiave: Numero del Destino, Numero dell'Anima, Numero della Personalità, Anno Personale, Numero del Karma, Numero dell'Espressione.
+3. Ogni coppia di utenti ottiene un punteggio di compatibilità percentuale per ciascuna delle 6 dimensioni.
+4. Gli utenti vengono mostrati ordinati per compatibilità complessiva.
+5. I match possono chattare direttamente in piattaforma.
+
+## Differenza dagli oroscopi
+
+La numerologia pitagorica usa la **data di nascita esatta** per calcolare numeri unici e personali. Non è generica come l'oroscopo (valido per milioni di persone nate nello stesso mese) — ogni analisi è su misura per quella specifica persona.
+
+## Pricing
+
+- Piano gratuito: disponibile senza carta di credito. Include mappa base e sezione Anime Gemelle di base.
+- Piano premium: sblocca tutti i contenuti avanzati.
+
+## Privacy e sicurezza
+
+- Crittografia avanzata dei dati.
+- Nessuna condivisione con terze parti.
+- Conformità GDPR europea.
+- Cancellazione account in qualsiasi momento.
+
+## Link utili
+
+- Home: https://numerologicaldestiny.com/
+- Trova Anima Gemella: https://numerologicaldestiny.com/trova-anima-gemella
+- Community: https://numerologicaldestiny.com/community
+- Privacy: https://numerologicaldestiny.com/privacy
+- Termini: https://numerologicaldestiny.com/terms

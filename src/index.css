@@ -1,0 +1,228 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design System: NumerologicalDestiny
+   Palette: Navy #0A0F2E + Rose #C9184A + sfondi bianchi/crema
+*/
+
+@layer base {
+  :root {
+    /* Sfondo caldo bianco/crema */
+    --background: 40 33% 99%;
+    --foreground: 232 64% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 232 64% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 232 64% 11%;
+
+    /* Rose — colore primario */
+    --primary: 342 79% 44%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Navy — colore secondario */
+    --secondary: 232 64% 11%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Sfondo muted crema */
+    --muted: 25 60% 97%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Rose chiaro per accenti */
+    --accent: 342 100% 97%;
+    --accent-foreground: 342 79% 44%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 342 79% 44%;
+
+    --radius: 0.75rem;
+
+    /* Gradienti */
+    --gradient-rose: linear-gradient(135deg, #C9184A 0%, #A30F38 100%);
+    --gradient-navy: linear-gradient(135deg, #0A0F2E 0%, #1E2952 100%);
+    --gradient-accent: linear-gradient(135deg, #C9184A 0%, #F472B6 100%);
+
+    /* Sidebar navy scura */
+    --sidebar-background: 232 64% 11%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 342 79% 44%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 228 46% 22%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 232 50% 20%;
+    --sidebar-ring: 342 79% 44%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Typography con font serif per titoli */
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+}
+
+@layer components {
+  /* Testo con gradiente rose — ex .text-gradient-gold */
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #C9184A 0%, #F472B6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glow rose */
+  .glow-gold {
+    box-shadow: 0 0 20px hsl(342 79% 44% / 0.25), 0 0 40px hsl(342 79% 44% / 0.1);
+  }
+
+  .glow-gold-strong {
+    box-shadow: 0 0 30px hsl(342 79% 44% / 0.4), 0 0 60px hsl(342 79% 44% / 0.15);
+  }
+
+  /* Card bianca con bordo leggero — ex .glass-cosmic */
+  .glass-cosmic {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(220 13% 91%);
+    box-shadow: 0 4px 24px hsl(232 64% 11% / 0.06);
+  }
+
+  /* Bordo con gradiente rose */
+  .border-gradient-gold {
+    position: relative;
+    border: 1px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                linear-gradient(135deg, #C9184A 0%, #F472B6 100%) border-box;
+  }
+
+  /* Pulse rose */
+  .pulse-gold {
+    animation: pulseRose 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulseRose {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(342 79% 44% / 0.3); }
+    50%       { box-shadow: 0 0 0 15px hsl(342 79% 44% / 0); }
+  }
+
+  /* Numero circolare */
+  .number-circle {
+    @apply inline-flex items-center justify-center;
+    @apply w-16 h-16 rounded-full;
+    @apply text-2xl font-bold text-white;
+    background: #C9184A;
+  }
+
+  .number-circle-lg {
+    @apply w-24 h-24 text-4xl;
+  }
+
+  /* Input */
+  .input-cosmic {
+    @apply bg-white border-border rounded-lg;
+    @apply focus:border-primary focus:ring-2 focus:ring-primary/20;
+    @apply transition-all duration-300;
+  }
+
+  /* Bottone primario */
+  .btn-cosmic {
+    @apply relative overflow-hidden;
+    background: #C9184A;
+    @apply text-white font-semibold;
+    @apply rounded-xl px-6 py-3;
+    @apply transition-all duration-300;
+    @apply hover:bg-[#A30F38] hover:shadow-lg;
+  }
+
+  /* Pattern numeri — colore navy chiaro */
+  .numerology-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='30' y='35' font-size='20' fill='%230A0F2E' fill-opacity='0.03' text-anchor='middle' font-family='serif'%3E9%3C/text%3E%3C/svg%3E");
+    background-size: 60px 60px;
+  }
+}
+
+@layer utilities {
+  /* Animazione fade in up */
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.8s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Animazione float */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* Animazione rotate slow */
+  .animate-rotate-slow {
+    animation: rotateSlow 20s linear infinite;
+  }
+
+  @keyframes rotateSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Scrollbar stilizzata */
+  .scrollbar-cosmic::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-cosmic::-webkit-scrollbar-track {
+    background: hsl(232 40% 10%);
+  }
+
+  .scrollbar-cosmic::-webkit-scrollbar-thumb {
+    background: hsl(43 89% 58% / 0.3);
+    border-radius: 4px;
+  }
+
+  .scrollbar-cosmic::-webkit-scrollbar-thumb:hover {
+    background: hsl(43 89% 58% / 0.5);
+  }
+}
