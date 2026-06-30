@@ -24,6 +24,7 @@ import {
   Stars,
 } from "lucide-react";
 import { z } from "zod";
+import { useTenant } from "@/contexts/TenantContext";
 
 const nameSchema = z.string().min(2).max(50);
 const dateSchema = z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/);
@@ -53,6 +54,7 @@ const getSteps = (t: any) => [
 
 const Onboarding = () => {
   const { t, i18n } = useTranslation();
+  const tenant = useTenant();
   const steps = getSteps(t);
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -218,6 +220,7 @@ const Onboarding = () => {
         onboarding_completed: true,
         language: i18n.language,
         dating_visible: formData.datingEnabled,
+        ...(tenant?.id ? { tenant_id: tenant.id } : {}),
         ...(formData.datingEnabled && {
           looking_for: formData.lookingFor,
           bio: formData.bio.trim() || null,
