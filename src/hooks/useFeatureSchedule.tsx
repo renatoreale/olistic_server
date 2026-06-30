@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/contexts/TenantContext";
 
 interface FeatureScheduleItem {
   feature_key: string;
@@ -67,8 +68,14 @@ export function FeatureScheduleProvider({ children }: { children: ReactNode }) {
     loadSchedule();
   }, [loadSchedule]);
 
+  const tenant = useTenant();
+
   const isFeatureUnlocked = useCallback((featureKey: string): boolean => {
     if (bypassSchedule) return true;
+    // Controlla prima i feature flags del tenant
+    if (tenant && tenant.enabledFeatures.length > 0 && !tenant.enabledFeatures.includes(featureKey)) {
+      return false;
+    }
     const feature = schedule.find(f => f.feature_key === featureKey);
     if (!feature) return true;
     if (!feature.enabled) return false;
@@ -79,7 +86,7 @@ export function FeatureScheduleProvider({ children }: { children: ReactNode }) {
     const now = new Date();
     const daysSinceCreation = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
     return daysSinceCreation >= feature.unlock_after_days;
-  }, [schedule, userCreatedAt, bypassSchedule]);
+  }, [schedule, userCreatedAt, bypassSchedule, tenant]);
 
   const getDaysRemaining = useCallback((featureKey: string): number => {
     if (bypassSchedule) return 0;

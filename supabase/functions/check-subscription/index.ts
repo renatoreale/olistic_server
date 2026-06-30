@@ -1,14 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { resolveTenant } from "../_shared/tenant.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-tenant-key",
 };
-
-const SUBSCRIPTION_PRODUCT_ID = "prod_UC8lYk5YrO4Yqs";
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
@@ -47,13 +46,12 @@ serve(async (req) => {
     const user = { id: userId, email: userEmail };
     logStep("User authenticated", { email: user.email });
 
-    // DB-based subscription override: grants subscription access only,
-    // not full access to pay-per-use services.
+    // Override DB: accesso garantito manualmente
     const { data: overrides } = await supabaseClient
       .from("user_service_overrides")
       .select("service_key")
       .eq("user_id", user.id);
-    
+
     if (overrides && overrides.some((o: any) => o.service_key === "subscription")) {
       logStep("DB subscription override found", { userId: user.id });
       return new Response(
@@ -62,7 +60,10 @@ serve(async (req) => {
       );
     }
 
-    const stripeKey = (Deno.env.get("STRIPE_SECRET_KEY") ?? "").trim();
+    // Risolve Stripe key dal tenant
+    const tenant = await resolveTenant(req);
+    const stripeKey = (tenant?.stripe_secret_key ?? Deno.env.get("STRIPE_SECRET_KEY") ?? "").trim();
+
     if (!stripeKey || stripeKey.startsWith("pk_")) {
       return unsubscribedResponse({ error: "Stripe key misconfigured" });
     }
@@ -88,7 +89,6 @@ serve(async (req) => {
       const subscription = subscriptions.data[0];
       const subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
       logStep("Active subscription found", { subscriptionEnd });
-
       return new Response(
         JSON.stringify({ subscribed: true, subscription_end: subscriptionEnd }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },

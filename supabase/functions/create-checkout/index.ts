@@ -1,10 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { resolveTenant, corsHeaders as tenantCorsHeaders } from "../_shared/tenant.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-tenant-key",
 };
 
 serve(async (req) => {
@@ -27,11 +29,13 @@ serve(async (req) => {
     const { priceId, mode } = await req.json();
     if (!priceId) throw new Error("priceId is required");
 
-    const checkoutMode = mode === "payment" ? "payment" : "subscription";
+    // Risolve tenant per usare il suo Stripe key
+    const tenant = await resolveTenant(req);
+    const stripeKey = tenant?.stripe_secret_key ?? Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+    if (!stripeKey) throw new Error("Stripe non configurato per questo tenant");
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2025-08-27.basil",
-    });
+    const checkoutMode = mode === "payment" ? "payment" : "subscription";
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
@@ -39,9 +43,10 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
+    const origin = req.headers.get("origin");
     const successUrl = checkoutMode === "payment"
-      ? `${req.headers.get("origin")}/dashboard?purchase=success&price_id=${priceId}`
-      : `${req.headers.get("origin")}/dashboard?subscription=success`;
+      ? `${origin}/dashboard?purchase=success&price_id=${priceId}`
+      : `${origin}/dashboard?subscription=success`;
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -49,10 +54,11 @@ serve(async (req) => {
       line_items: [{ price: priceId, quantity: 1 }],
       mode: checkoutMode,
       success_url: successUrl,
-      cancel_url: `${req.headers.get("origin")}/pricing`,
+      cancel_url: `${origin}/pricing`,
       metadata: {
         user_id: user.id,
         price_id: priceId,
+        tenant_id: tenant?.id ?? "",
       },
     });
 
