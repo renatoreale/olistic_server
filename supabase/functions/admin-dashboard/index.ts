@@ -48,13 +48,21 @@ Deno.serve(async (req) => {
         });
 
     // Legge il ruolo dal database (profiles.role)
-    const { data: profileRow } = await supabase
+    const { data: profileRow, error: profileErr } = await supabase
       .from("profiles")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const userRole: string = profileRow?.role || "user";
+    console.log(`[admin] profileRow=${JSON.stringify(profileRow)} profileErr=${profileErr?.message}`);
+
+    // Fallback: se la query fallisce o il ruolo non è impostato, controlla email
+    const SUPERADMIN_EMAILS = ["realerenato@gmail.com"];
+    let userRole: string = profileRow?.role || "user";
+    if (userRole === "user" && SUPERADMIN_EMAILS.includes(user.email)) {
+      userRole = "superadmin";
+      console.log(`[admin] role overridden to superadmin via email fallback`);
+    }
     console.log(`[admin] role=${userRole}`);
 
     if (!["admin", "superadmin"].includes(userRole)) {
