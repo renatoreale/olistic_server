@@ -8,6 +8,8 @@ import {
   LogIn, KeyRound, Trash2, Gift, Plus, Power, ToggleLeft, ToggleRight, Heart,
   MessageSquare, Lightbulb, HelpCircle, CheckCircle, Clock, ChevronDown, ChevronUp,
   Building2, Copy, Check, Globe, Palette, Zap,
+  FlaskConical, Hash, ToggleLeft as ToggleOff, ToggleRight as ToggleOn, ChevronRight,
+  Filter, AlertTriangle, Sparkles, Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,6 +132,26 @@ const AdminDashboard = () => {
   const [soulmatesBeta, setSoulmatesBeta] = useState(true);
   const [savingBeta, setSavingBeta] = useState(false);
 
+  // Numerology algorithms state
+  const [algorithms, setAlgorithms] = useState<any[]>([]);
+  const [algorithmsLoading, setAlgorithmsLoading] = useState(false);
+  const [editingAlgorithm, setEditingAlgorithm] = useState<any | null>(null);
+  const [showNewAlgorithm, setShowNewAlgorithm] = useState(false);
+  const [savingAlgorithm, setSavingAlgorithm] = useState(false);
+  const [algoCategory, setAlgoCategory] = useState<string>("all");
+  const defaultNewAlgo = {
+    key: "", name: "", category: "custom", description: "",
+    input_type: "name", letter_filter: "all", mapping_type: "pythagorean",
+    custom_mapping: "{}", birthdate_formula: "sum_all_digits", derived_formula: "",
+    allow_master_numbers: true, master_numbers: "11,22,33",
+    is_active: true, sort_order: 0,
+  };
+  const [newAlgorithm, setNewAlgorithm] = useState({ ...defaultNewAlgo });
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiInterpreting, setAiInterpreting] = useState(false);
+  const [aiPreview, setAiPreview] = useState<{ example: any; reasoning: string } | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   useEffect(() => {
     fetchOverview();
     fetchFeatureSchedule();
@@ -137,6 +159,7 @@ const AdminDashboard = () => {
     fetchDatingConfig();
     fetchTickets();
     fetchTenants();
+    fetchAlgorithms();
   }, []);
 
   const fetchTenants = async () => {
@@ -204,6 +227,129 @@ const AdminDashboard = () => {
         if (row.setting_key === "soulmates_beta_mode") setSoulmatesBeta(row.setting_value === "true");
       }
     }
+  };
+
+  const fetchAlgorithms = async () => {
+    setAlgorithmsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data } = await supabase.functions.invoke("admin-dashboard", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { action: "list-algorithms" },
+      });
+      if (data?.algorithms) setAlgorithms(data.algorithms);
+    } catch (e) { console.error(e); }
+    setAlgorithmsLoading(false);
+  };
+
+  const handleToggleAlgorithm = async (id: string, currentActive: boolean) => {
+    setAlgorithms(prev => prev.map(a => a.id === id ? { ...a, is_active: !currentActive } : a));
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    await supabase.functions.invoke("admin-dashboard", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { action: "update-algorithm", algorithm_id: id, is_active: !currentActive },
+    });
+  };
+
+  const handleCreateAlgorithm = async () => {
+    if (!newAlgorithm.key || !newAlgorithm.name) return;
+    setSavingAlgorithm(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      let customMapping = {};
+      if (newAlgorithm.mapping_type === "custom") {
+        try { customMapping = JSON.parse(newAlgorithm.custom_mapping); } catch { customMapping = {}; }
+      }
+      const masterNums = newAlgorithm.master_numbers
+        .split(",").map((s: string) => parseInt(s.trim())).filter((n: number) => !isNaN(n));
+      const { data } = await supabase.functions.invoke("admin-dashboard", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { action: "create-algorithm", ...newAlgorithm, custom_mapping: customMapping, master_numbers: masterNums },
+      });
+      if (data?.algorithm) {
+        setAlgorithms(prev => [...prev, data.algorithm]);
+        setShowNewAlgorithm(false);
+        setNewAlgorithm({ ...defaultNewAlgo });
+      }
+    } catch (e) { console.error(e); }
+    setSavingAlgorithm(false);
+  };
+
+  const handleUpdateAlgorithm = async () => {
+    if (!editingAlgorithm) return;
+    setSavingAlgorithm(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      let cm = editingAlgorithm.custom_mapping;
+      if (typeof cm === "string") { try { cm = JSON.parse(cm); } catch { cm = {}; } }
+      const mn = typeof editingAlgorithm.master_numbers === "string"
+        ? editingAlgorithm.master_numbers.split(",").map((s: string) => parseInt(s.trim())).filter((n: number) => !isNaN(n))
+        : editingAlgorithm.master_numbers;
+      await supabase.functions.invoke("admin-dashboard", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { action: "update-algorithm", algorithm_id: editingAlgorithm.id, ...editingAlgorithm, custom_mapping: cm, master_numbers: mn },
+      });
+      setAlgorithms(prev => prev.map(a => a.id === editingAlgorithm.id ? { ...editingAlgorithm, custom_mapping: cm, master_numbers: mn } : a));
+      setEditingAlgorithm(null);
+    } catch (e) { console.error(e); }
+    setSavingAlgorithm(false);
+  };
+
+  const handleInterpretAlgorithm = async () => {
+    if (!aiDescription.trim()) return;
+    setAiInterpreting(true);
+    setAiPreview(null);
+    setAiError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setAiError("Sessione scaduta — ricarica la pagina"); setAiInterpreting(false); return; }
+      const { data, error: fnErr } = await supabase.functions.invoke("admin-dashboard", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { action: "interpret-algorithm", description: aiDescription },
+      });
+      if (fnErr) { setAiError("Errore edge function: " + fnErr.message); setAiInterpreting(false); return; }
+      if (data?.error) { setAiError(data.error); setAiInterpreting(false); return; }
+      if (data?.config) {
+        setNewAlgorithm({
+          key: data.config.key || "",
+          name: data.config.name || "",
+          category: data.config.category || "custom",
+          description: data.config.description || "",
+          input_type: data.config.input_type || "name",
+          letter_filter: data.config.letter_filter || "all",
+          mapping_type: data.config.mapping_type || "pythagorean",
+          custom_mapping: typeof data.config.custom_mapping === "object" && Object.keys(data.config.custom_mapping || {}).length > 0
+            ? JSON.stringify(data.config.custom_mapping) : "{}",
+          birthdate_formula: data.config.birthdate_formula || "sum_all_digits",
+          derived_formula: data.config.derived_formula || "",
+          allow_master_numbers: data.config.allow_master_numbers !== false,
+          master_numbers: Array.isArray(data.config.master_numbers) ? data.config.master_numbers.join(",") : "11,22,33",
+          is_active: data.config.is_active !== false,
+          sort_order: data.config.sort_order || 0,
+        });
+        setAiPreview({ example: data.example, reasoning: data.reasoning });
+      } else {
+        setAiError("Risposta AI non valida — riprova");
+      }
+    } catch (e: any) {
+      setAiError(e?.message || "Errore sconosciuto");
+    }
+    setAiInterpreting(false);
+  };
+
+  const handleDeleteAlgorithm = async (id: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { data } = await supabase.functions.invoke("admin-dashboard", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { action: "delete-algorithm", algorithm_id: id },
+    });
+    if (data?.success) setAlgorithms(prev => prev.filter(a => a.id !== id));
+    else if (data?.error) alert(data.error);
   };
 
   const saveDatingConfig = async () => {
@@ -1415,6 +1561,457 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
+
+        {/* Numerology Algorithms - superadmin only */}
+        {isSuperadmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-cosmic rounded-xl p-6 mb-8"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="w-5 h-5 text-primary" />
+                <h2 className="font-display text-lg font-semibold">Algoritmi Numerologici</h2>
+                {algorithmsLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+              </div>
+              <Button variant="cosmic" size="sm" onClick={() => { setShowNewAlgorithm(!showNewAlgorithm); setEditingAlgorithm(null); }}>
+                <Plus className="w-4 h-4 mr-1" />
+                Nuovo algoritmo
+              </Button>
+            </div>
+
+            {/* Category filter */}
+            {(() => {
+              const cats = [
+                { key: "all", label: "Tutti" },
+                { key: "destino", label: "Destino" },
+                { key: "anima", label: "Anima" },
+                { key: "io", label: "Io" },
+                { key: "personalita", label: "Personalità" },
+                { key: "karma", label: "Karma" },
+                { key: "vibrazione", label: "Vibrazione" },
+                { key: "cicli", label: "Cicli" },
+                { key: "custom", label: "Custom" },
+              ];
+              return (
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {cats.map(c => (
+                    <button key={c.key} onClick={() => setAlgoCategory(c.key)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        algoCategory === c.key ? "bg-primary text-primary-foreground" : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                      }`}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* New algorithm form */}
+            {showNewAlgorithm && (() => {
+              const inputLabels: Record<string, string> = { name: "Da nome", birthdate: "Da data di nascita", derived: "Derivato" };
+              const filterLabels: Record<string, string> = { all: "Tutte le lettere", vowels: "Solo vocali", consonants: "Solo consonanti" };
+              const mappingLabels: Record<string, string> = { pythagorean: "Pitagorica", chaldean: "Caldea", custom: "Personalizzata (JSON)" };
+              const bdLabels: Record<string, string> = { sum_all_digits: "Somma tutte le cifre", personal_year: "Anno personale", personal_month: "Mese personale", day_vibration: "Vibrazione del giorno" };
+              return (
+                <div className="bg-muted/20 border border-primary/30 rounded-xl p-4 mb-4">
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-primary" />
+                    Nuovo algoritmo
+                  </h3>
+
+                  {/* AI description */}
+                  <div className="mb-4 rounded-lg border border-violet-500/40 bg-violet-500/5 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Bot className="w-4 h-4 text-violet-400" />
+                      <span className="text-sm font-medium text-violet-300">Descrivi con AI</span>
+                      <span className="text-[10px] text-violet-400/60 ml-auto">Compila i campi automaticamente</span>
+                    </div>
+                    <Textarea
+                      value={aiDescription}
+                      onChange={e => setAiDescription(e.target.value)}
+                      placeholder="Descrivi come deve funzionare l'algoritmo in linguaggio naturale. Es: «Calcola la somma delle consonanti del nome con mappatura caldea, senza ridurre i numeri master 11 e 22, categoria karma»"
+                      className="text-sm h-20 mb-2 bg-black/20 border-violet-500/30 focus:border-violet-500 resize-none"
+                    />
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={handleInterpretAlgorithm}
+                      disabled={aiInterpreting || !aiDescription.trim()}
+                      className="border-violet-500/50 text-violet-300 hover:bg-violet-500/20 hover:border-violet-400"
+                    >
+                      {aiInterpreting
+                        ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Interpretazione in corso…</>
+                        : <><Sparkles className="w-4 h-4 mr-1.5" />Interpreta con AI</>
+                      }
+                    </Button>
+                    {aiError && (
+                      <div className="mt-2 flex items-start gap-2 rounded-md bg-red-500/10 border border-red-500/30 px-3 py-2">
+                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-xs text-red-300">{aiError}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* AI preview — shown after interpretation */}
+                  {aiPreview && (
+                    <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-emerald-400" />
+                        <span className="text-sm font-medium text-emerald-300">Configurazione generata — verifica i campi sotto</span>
+                      </div>
+                      {aiPreview.reasoning && (
+                        <p className="text-xs text-muted-foreground italic border-l-2 border-emerald-500/40 pl-2">
+                          {aiPreview.reasoning}
+                        </p>
+                      )}
+                      {aiPreview.example && (
+                        <div className="rounded-md bg-black/30 border border-emerald-500/20 p-3">
+                          <p className="text-xs font-medium text-emerald-300 mb-2">Esempio di calcolo</p>
+                          {aiPreview.example.input_description && (
+                            <p className="text-xs text-muted-foreground mb-2">
+                              <span className="text-foreground/70">Input:</span> {aiPreview.example.input_description}
+                            </p>
+                          )}
+                          {Array.isArray(aiPreview.example.steps) && aiPreview.example.steps.length > 0 && (
+                            <ol className="space-y-1 mb-2">
+                              {aiPreview.example.steps.map((step: string, i: number) => (
+                                <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                                  <span className="text-emerald-500/70 shrink-0">{i + 1}.</span>
+                                  <span>{step}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                          {aiPreview.example.result !== undefined && (
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-emerald-500/20">
+                              <span className="text-xs text-muted-foreground">Risultato:</span>
+                              <span className="text-lg font-bold text-emerald-300">{aiPreview.example.result}</span>
+                              {aiPreview.example.interpretation && (
+                                <span className="text-xs text-muted-foreground">— {aiPreview.example.interpretation}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-[10px] text-muted-foreground/60">I campi sottostanti sono stati pre-compilati. Verificali e modifica se necessario prima di salvare.</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Chiave univoca *</label>
+                      <Input value={newAlgorithm.key} onChange={e => setNewAlgorithm(p => ({ ...p, key: e.target.value }))} placeholder="es. myCustomNumber" className="text-sm h-8" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Nome *</label>
+                      <Input value={newAlgorithm.name} onChange={e => setNewAlgorithm(p => ({ ...p, name: e.target.value }))} placeholder="Nome visualizzato" className="text-sm h-8" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
+                      <select value={newAlgorithm.category} onChange={e => setNewAlgorithm(p => ({ ...p, category: e.target.value }))}
+                        className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                        {["destino","anima","io","personalita","karma","vibrazione","cicli","custom"].map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Tipo input</label>
+                      <select value={newAlgorithm.input_type} onChange={e => setNewAlgorithm(p => ({ ...p, input_type: e.target.value }))}
+                        className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                        {Object.entries(inputLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </div>
+                    {newAlgorithm.input_type === "name" && <>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Filtro lettere</label>
+                        <select value={newAlgorithm.letter_filter} onChange={e => setNewAlgorithm(p => ({ ...p, letter_filter: e.target.value }))}
+                          className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                          {Object.entries(filterLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Mappatura</label>
+                        <select value={newAlgorithm.mapping_type} onChange={e => setNewAlgorithm(p => ({ ...p, mapping_type: e.target.value }))}
+                          className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                          {Object.entries(mappingLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </div>
+                      {newAlgorithm.mapping_type === "custom" && (
+                        <div className="col-span-2">
+                          <label className="text-xs text-muted-foreground mb-1 block">Mappatura JSON (es. {`{"A":1,"B":2,...}`})</label>
+                          <Textarea value={newAlgorithm.custom_mapping} onChange={e => setNewAlgorithm(p => ({ ...p, custom_mapping: e.target.value }))}
+                            className="text-xs font-mono h-20" placeholder='{"A":1,"B":2,"C":3}' />
+                        </div>
+                      )}
+                    </>}
+                    {newAlgorithm.input_type === "birthdate" && (
+                      <div className="col-span-2">
+                        <label className="text-xs text-muted-foreground mb-1 block">Formula data di nascita</label>
+                        <select value={newAlgorithm.birthdate_formula} onChange={e => setNewAlgorithm(p => ({ ...p, birthdate_formula: e.target.value }))}
+                          className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                          {Object.entries(bdLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {newAlgorithm.input_type === "derived" && (
+                      <div className="col-span-2 space-y-2">
+                        <label className="text-xs text-muted-foreground mb-1 block">Formula derivata (es. soul + lifePath)</label>
+                        <Input value={newAlgorithm.derived_formula} onChange={e => setNewAlgorithm(p => ({ ...p, derived_formula: e.target.value }))}
+                          placeholder="soul + lifePath" className="text-sm h-8 font-mono" />
+                        <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                          <p className="text-[10px] text-muted-foreground mb-1.5">Variabili disponibili — clicca per inserire:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {algorithms.filter(a => a.input_type !== "derived").map((a: any) => (
+                              <button key={a.key} type="button"
+                                onClick={() => setNewAlgorithm(p => ({ ...p, derived_formula: p.derived_formula ? `${p.derived_formula} + ${a.key}` : a.key }))}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/20 hover:bg-primary/40 text-primary text-xs font-mono transition-colors"
+                                title={a.name}>
+                                <Hash className="w-2.5 h-2.5" />{a.key}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Numeri master (es. 11,22,33)</label>
+                      <Input value={newAlgorithm.master_numbers} onChange={e => setNewAlgorithm(p => ({ ...p, master_numbers: e.target.value }))}
+                        placeholder="11,22,33" className="text-sm h-8" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Ordine visualizzazione</label>
+                      <Input type="number" value={newAlgorithm.sort_order} onChange={e => setNewAlgorithm(p => ({ ...p, sort_order: parseInt(e.target.value) || 0 }))}
+                        className="text-sm h-8" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs text-muted-foreground mb-1 block">Descrizione</label>
+                      <Textarea value={newAlgorithm.description} onChange={e => setNewAlgorithm(p => ({ ...p, description: e.target.value }))}
+                        placeholder="Descrizione dell'algoritmo..." className="text-sm h-16" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="new-masters" checked={newAlgorithm.allow_master_numbers}
+                        onCheckedChange={v => setNewAlgorithm(p => ({ ...p, allow_master_numbers: !!v }))} />
+                      <label htmlFor="new-masters" className="text-xs text-muted-foreground cursor-pointer">Preserva numeri master</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="new-active" checked={newAlgorithm.is_active}
+                        onCheckedChange={v => setNewAlgorithm(p => ({ ...p, is_active: !!v }))} />
+                      <label htmlFor="new-active" className="text-xs text-muted-foreground cursor-pointer">Attivo</label>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => { setShowNewAlgorithm(false); setNewAlgorithm({ ...defaultNewAlgo }); setAiDescription(""); setAiPreview(null); setAiError(null); }}>
+                      Annulla
+                    </Button>
+                    <Button variant="cosmic" size="sm" onClick={handleCreateAlgorithm} disabled={savingAlgorithm || !newAlgorithm.key || !newAlgorithm.name}>
+                      {savingAlgorithm ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                      Crea algoritmo
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Algorithm list */}
+            {algorithmsLoading && algorithms.length === 0 ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : (
+              <div className="space-y-2">
+                {(() => {
+                  const categoryColors: Record<string, string> = {
+                    destino: "bg-purple-500/20 text-purple-300 border-purple-500/30",
+                    anima: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+                    io: "bg-green-500/20 text-green-300 border-green-500/30",
+                    personalita: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+                    karma: "bg-red-500/20 text-red-300 border-red-500/30",
+                    vibrazione: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+                    cicli: "bg-orange-500/20 text-orange-300 border-orange-500/30",
+                    custom: "bg-gray-500/20 text-gray-300 border-gray-500/30",
+                  };
+                  const inputTypeIcon: Record<string, string> = { name: "Nome", birthdate: "Data", derived: "Derivato" };
+                  const filtered = algoCategory === "all" ? algorithms : algorithms.filter(a => a.category === algoCategory);
+
+                  if (filtered.length === 0) {
+                    return <p className="text-sm text-muted-foreground text-center py-4">Nessun algoritmo in questa categoria</p>;
+                  }
+
+                  return filtered.map((algo: any) => (
+                    <div key={algo.id} className="rounded-lg border border-white/10 bg-white/5">
+                      <div className="flex items-center gap-3 p-3">
+                        <button onClick={() => handleToggleAlgorithm(algo.id, algo.is_active)} className="shrink-0">
+                          {algo.is_active
+                            ? <ToggleOn className="w-5 h-5 text-primary" />
+                            : <ToggleOff className="w-5 h-5 text-muted-foreground" />
+                          }
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${categoryColors[algo.category] || categoryColors.custom}`}>
+                              {algo.category}
+                            </span>
+                            <span className="text-xs bg-muted/30 text-muted-foreground px-2 py-0.5 rounded-full">
+                              {inputTypeIcon[algo.input_type] || algo.input_type}
+                            </span>
+                            {algo.is_system && (
+                              <span className="text-[10px] text-muted-foreground/60 italic">sistema</span>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-foreground mt-1">{algo.name}</p>
+                          {algo.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{algo.description}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => { setEditingAlgorithm(editingAlgorithm?.id === algo.id ? null : { ...algo, master_numbers: Array.isArray(algo.master_numbers) ? algo.master_numbers.join(",") : algo.master_numbers, custom_mapping: typeof algo.custom_mapping === "object" ? JSON.stringify(algo.custom_mapping) : algo.custom_mapping }); setShowNewAlgorithm(false); }}
+                            className="p-1.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+                            title="Modifica"
+                          >
+                            <ChevronRight className={`w-4 h-4 transition-transform ${editingAlgorithm?.id === algo.id ? "rotate-90" : ""}`} />
+                          </button>
+                          {!algo.is_system && (
+                            <button
+                              onClick={() => { if (confirm(`Eliminare "${algo.name}"?`)) handleDeleteAlgorithm(algo.id); }}
+                              className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
+                              title="Elimina"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Inline edit form */}
+                      {editingAlgorithm?.id === algo.id && (() => {
+                        const ea = editingAlgorithm;
+                        const inputLabels: Record<string, string> = { name: "Da nome", birthdate: "Da data di nascita", derived: "Derivato" };
+                        const filterLabels: Record<string, string> = { all: "Tutte le lettere", vowels: "Solo vocali", consonants: "Solo consonanti" };
+                        const mappingLabels: Record<string, string> = { pythagorean: "Pitagorica", chaldean: "Caldea", custom: "Personalizzata (JSON)" };
+                        const bdLabels: Record<string, string> = { sum_all_digits: "Somma tutte le cifre", personal_year: "Anno personale", personal_month: "Mese personale", day_vibration: "Vibrazione del giorno" };
+                        const setEA = (patch: any) => setEditingAlgorithm((p: any) => ({ ...p, ...patch }));
+                        return (
+                          <div className="border-t border-white/10 p-3 bg-white/5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
+                                <Input value={ea.name} onChange={e => setEA({ name: e.target.value })} className="text-sm h-8" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
+                                <select value={ea.category} onChange={e => setEA({ category: e.target.value })}
+                                  className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                                  {["destino","anima","io","personalita","karma","vibrazione","cicli","custom"].map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-muted-foreground mb-1 block">Tipo input</label>
+                                <select value={ea.input_type} onChange={e => {
+                                  const t = e.target.value;
+                                  setEA({ input_type: t, ...(t === "birthdate" && !ea.birthdate_formula ? { birthdate_formula: "sum_all_digits" } : {}) });
+                                }} className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                                  {Object.entries(inputLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                </select>
+                              </div>
+                              {ea.input_type === "name" && <>
+                                <div>
+                                  <label className="text-xs text-muted-foreground mb-1 block">Filtro lettere</label>
+                                  <select value={ea.letter_filter} onChange={e => setEA({ letter_filter: e.target.value })}
+                                    className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                                    {Object.entries(filterLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-xs text-muted-foreground mb-1 block">Mappatura</label>
+                                  <select value={ea.mapping_type} onChange={e => setEA({ mapping_type: e.target.value })}
+                                    className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                                    {Object.entries(mappingLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                  </select>
+                                </div>
+                                {ea.mapping_type === "custom" && (
+                                  <div className="col-span-2">
+                                    <label className="text-xs text-muted-foreground mb-1 block">Mappatura JSON</label>
+                                    <Textarea value={ea.custom_mapping} onChange={e => setEA({ custom_mapping: e.target.value })}
+                                      className="text-xs font-mono h-20" placeholder='{"A":1,"B":2,"C":3}' />
+                                  </div>
+                                )}
+                              </>}
+                              {ea.input_type === "birthdate" && (
+                                <div className="col-span-2">
+                                  <label className="text-xs text-muted-foreground mb-1 block">Formula data di nascita</label>
+                                  <select value={ea.birthdate_formula ?? "sum_all_digits"} onChange={e => setEA({ birthdate_formula: e.target.value })}
+                                    className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm">
+                                    {Object.entries(bdLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                  </select>
+                                </div>
+                              )}
+                              {ea.input_type === "derived" && (
+                                <div className="col-span-2 space-y-2">
+                                  <label className="text-xs text-muted-foreground mb-1 block">Formula derivata</label>
+                                  <Input value={ea.derived_formula} onChange={e => setEA({ derived_formula: e.target.value })}
+                                    placeholder="soul + lifePath" className="text-sm h-8 font-mono" />
+                                  <div className="rounded-md border border-white/10 bg-white/5 p-2">
+                                    <p className="text-[10px] text-muted-foreground mb-1.5">Variabili disponibili — clicca per inserire:</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {algorithms.filter(a => a.input_type !== "derived" && a.id !== ea.id).map((a: any) => (
+                                        <button key={a.key} type="button"
+                                          onClick={() => setEA({ derived_formula: ea.derived_formula ? `${ea.derived_formula} + ${a.key}` : a.key })}
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/20 hover:bg-primary/40 text-primary text-xs font-mono transition-colors"
+                                          title={a.name}>
+                                          <Hash className="w-2.5 h-2.5" />{a.key}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              <div>
+                                <label className="text-xs text-muted-foreground mb-1 block">Numeri master</label>
+                                <Input value={ea.master_numbers} onChange={e => setEA({ master_numbers: e.target.value })}
+                                  placeholder="11,22,33" className="text-sm h-8" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-muted-foreground mb-1 block">Ordine</label>
+                                <Input type="number" value={ea.sort_order} onChange={e => setEA({ sort_order: parseInt(e.target.value) || 0 })} className="text-sm h-8" />
+                              </div>
+                              <div className="col-span-2">
+                                <label className="text-xs text-muted-foreground mb-1 block">Descrizione</label>
+                                <Textarea value={ea.description} onChange={e => setEA({ description: e.target.value })}
+                                  className="text-sm h-16" />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox id={`ea-masters-${algo.id}`} checked={ea.allow_master_numbers}
+                                  onCheckedChange={v => setEA({ allow_master_numbers: !!v })} />
+                                <label htmlFor={`ea-masters-${algo.id}`} className="text-xs text-muted-foreground cursor-pointer">Preserva numeri master</label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox id={`ea-active-${algo.id}`} checked={ea.is_active}
+                                  onCheckedChange={v => setEA({ is_active: !!v })} />
+                                <label htmlFor={`ea-active-${algo.id}`} className="text-xs text-muted-foreground cursor-pointer">Attivo</label>
+                              </div>
+                            </div>
+                            {algo.is_system && (
+                              <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-400/70">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                Algoritmo di sistema — la chiave non può essere modificata
+                              </div>
+                            )}
+                            <div className="flex gap-2 mt-3 justify-end">
+                              <Button variant="outline" size="sm" onClick={() => setEditingAlgorithm(null)}>Annulla</Button>
+                              <Button variant="cosmic" size="sm" onClick={handleUpdateAlgorithm} disabled={savingAlgorithm}>
+                                {savingAlgorithm ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+                                Salva
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Support Tickets */}
         <div className="glass-cosmic rounded-xl p-6 mb-8">
